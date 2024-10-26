@@ -1,0 +1,10 @@
+builtin.o
+command.o
+demo.txt
+include
+makefile
+my_shell
+my_shell.c
+out.txt
+shell.o
+src

@@ -36,6 +36,7 @@ int searchBuiltInCommand(struct cmd_node *cmd)
  * Return execution status
  */
 int execBuiltInCommand(int status,struct cmd_node *cmd){
+	redirection(cmd);	// Redirection
 	status = (*builtin_func[status])(cmd->args);
 	return status;
 }
@@ -72,7 +73,7 @@ int pwd(char **args)
 {
 	char cwd[BUF_SIZE];
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        printf("%s\n", cwd);
+		printf("%s\n", cwd);
     } else {
         perror("pwd");
     }

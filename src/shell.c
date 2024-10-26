@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <signal.h>
 #include "../include/command.h"
 #include "../include/builtin.h"
 
@@ -21,6 +22,30 @@
  */
 void redirection(struct cmd_node *p){
 	
+	// input redirection
+	if (p->in_file != NULL){
+		int in_fd = open(p->in_file, O_RDONLY);
+		if (in_fd < 0){
+			perror("Failed to open input file");
+			return;
+		}
+		dup2(in_fd, STDIN_FILENO);	// file descriptor no. of stdin redirect to in_fd
+		close(in_fd);
+	}
+
+	// output redirection
+	if (p->out_file != NULL){
+		// O_TRUNC : ensure the file write from start
+		// owner authorization, authorization of owner's group, others : 6->WR, 4->R 
+		int out_fd = open(p->out_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		if (out_fd < 0){
+			perror("Failed to open output file");
+			return;
+		}
+		dup2(out_fd, STDOUT_FILENO);	// file descriptor no. of stdout redirect to out_fd
+		close(out_fd);
+	}
+
 }
 // ===============================================================
 
@@ -37,6 +62,31 @@ void redirection(struct cmd_node *p){
  */
 int spawn_proc(struct cmd_node *p)
 {
+	if (signal(SIGCHLD, SIG_IGN) == SIG_ERR){
+		perror("signal");
+		exit(EXIT_FAILURE);
+	}
+
+	pid_t pid = fork();
+	switch (pid){
+		case -1:	// fork failed
+			perror("fork");
+			exit(EXIT_FAILURE);
+		
+		case 0:	// child process
+		
+			redirection(p);	// Redirection
+
+			execvp(p->args[0], p->args);
+			perror("execvp failed");
+			exit(EXIT_FAILURE);
+		
+		default:	// parent process
+			int status;
+			waitpid(pid, &status, 0);	// parent block until child finished
+			exit(EXIT_SUCCESS);
+	}
+
   	return 1;
 }
 // ===============================================================
